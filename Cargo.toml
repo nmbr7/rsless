@@ -1,0 +1,16 @@
+[package]
+name = "rsless"
+version = "0.1.0"
+authors = ["nmbr7 <suhailr7@ymail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "*"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+uuid = { version = "0.8", features = ["serde", "v4"] }
+dotenv = "0.10"
+redis = "*"
+walkdir = "*"
