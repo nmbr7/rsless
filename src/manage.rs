@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use std::fs::{self, DirBuilder};
 use std::io::prelude::*;
 use std::io::BufWriter;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum action_error {
@@ -15,6 +16,7 @@ pub enum action_error {
 }
 fn faas_create(data: &Value) -> Result<String, action_error> {
     let lang = data["lang"].as_str().unwrap();
+    let prototype = data["prototype"].as_str().unwrap();
     let filenames = data["file_name"].as_array().unwrap();
     let dirs = &data["dirs"].as_array().unwrap();
     let files = &data["files"];
@@ -38,6 +40,12 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     //let mainfile = &files[ind].as_str().unwrap();
     //println!("{}",mainfile);
 
+    let function_id = Uuid::new_v4().to_string() ;
+    let func_binary_path = format!("{}","temp/target/target/release/temp");
+
+    let mut con_pub = redis::Client::open("redis://172.28.5.3/2").unwrap();
+    let _: () = con_pub.set(&function_id, &func_binary_path).unwrap();
+
     for i in 0..filenames.len() {
         let file = filenames[i].as_str().unwrap().to_string();
         let fh = OpenOptions::new()
@@ -59,10 +67,11 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     match lang {
         "Rust" => {
             //println!("Reached {}",lang);
+
             let path = String::from("temp");
             //let proto = String::from("sd");
-            rust_temp(ind, path);
-            Ok(String::from("uuid"))
+            rust_temp(ind, path, prototype.to_string());
+            Ok(function_id)
         }
         //Some("Python") => ,
         //Some("c") => ,
@@ -74,9 +83,14 @@ fn faas_update() -> () {
 }
 */
 fn faas_delete(id: String) -> Result<String, action_error> {
-    let client = redis::Client::open("redis://172.28.5.3/2").unwrap();
-    let mut con = client.get_connection().unwrap();
-    let _: () = con.del(&id).unwrap();
+    let dev_db = redis::Client::open("redis://172.28.5.3/2").unwrap();
+    let pub_db = redis::Client::open("redis://172.28.5.3/3").unwrap();
+
+    let mut con_dev = dev_db.get_connection().unwrap();
+    let mut con_pub = pub_db.get_connection().unwrap();
+
+    let _: () = con_dev.del(&id.replace("\"","")).unwrap();
+    let _: () = con_pub.del(&id.replace("\"","")).unwrap();
     Ok(String::from("OK"))
 }
 //After publishing, the function will be invokable
@@ -87,8 +101,8 @@ fn faas_publish(id: String) -> Result<String, action_error> {
     let mut con_dev = dev_db.get_connection().unwrap();
     let mut con_pub = pub_db.get_connection().unwrap();
 
-    let val: String = con_dev.get(&id).unwrap();
-    let _: () = con_pub.set(&id, &val).unwrap();
+    let val: String = con_dev.get(&id.replace("\"","")).unwrap();
+    let _: () = con_pub.set(&id.replace("\"",""), &val).unwrap();
     Ok(String::from("OK"))
 }
 // TODO Currently only RPC is implemented (ie, Not Statefull)

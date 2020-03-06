@@ -3,11 +3,17 @@ use std::io::prelude::*;
 use std::io::BufWriter;
 use std::process::Command;
 
-pub fn rust_temp(ind: String, path: String) -> () {
+pub fn rust_temp(ind: String, path: String, prototype: String) -> () {
     //TODO
     //Get function name and function params count from the prototype
-    let funcname = String::from("call");
-    let params = String::from("&args[1],&args[2]");
+    
+    let funcname = prototype.split("(").collect::<Vec<&str>>()[0].trim();
+    let arg_count = prototype.split("(").collect::<Vec<&str>>()[1].split(")").collect::<Vec<&str>>()[0].split(",").collect::<Vec<&str>>().len(); 
+    let mut paramsvec: Vec<String> = Vec::new();
+    for i in 0..arg_count{
+        paramsvec.push(format!("&args[{}]",i+1));
+    }
+    let params = paramsvec.join(",");
 
     let a = format!(
         "
@@ -38,7 +44,7 @@ pub fn rust_temp(ind: String, path: String) -> () {
     let output = Command::new("cargo")
         .arg("build")
         .arg("--release")
-        .current_dir(format!("{}/newsrc", path))
+        .current_dir(format!("{}/newsr", path))
         .status()
         .expect("Error");
 }

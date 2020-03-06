@@ -70,6 +70,7 @@ fn main() -> std::io::Result<()> {
             (version: "0.1.0")
             (author: "nmbr_7")
             (@arg lang: -l --lang +takes_value "function language")
+            (@arg prototype: -p --proto +takes_value "function language")
             (@arg dir: -d --dir +takes_value "Function Directory (Directory must contain the function prototype file, funtion definition file, dependency modules and config files MAX Size should be less than 5MB)")
             )
      (@subcommand update =>
@@ -119,9 +120,10 @@ fn main() -> std::io::Result<()> {
             let msg_data = match client_matches.subcommand() {
                 ("create", Some(create_matches)) => {
                     let lang = create_matches.value_of("lang").unwrap().to_string();
+                    let prototype= create_matches.value_of("prototype").unwrap().to_string();
                     let dir = create_matches.value_of("dir").unwrap().to_string();
                     let djson = dirjson(dir);
-                    let data = format!("{{ \"msg_type\": \"MANAGE\" , \"action\": \"create\",\"lang\": {:?} , {} }}",lang, djson);
+                    let data = format!("{{ \"msg_type\": \"MANAGE\" , \"action\": \"create\",\"lang\": {:?}, \"prototype\": {:?}, {} }}",lang, prototype, djson);
                     //TEST
                     Ok(data)
                     //println!("{}",data);
@@ -159,8 +161,13 @@ fn main() -> std::io::Result<()> {
 
                 _ => Err("No valid subcommand was used"),
             };
-            stream.write(msg_data.unwrap().as_bytes()).unwrap();
+            stream.write_all(msg_data.unwrap().as_bytes()).unwrap();
             stream.flush().unwrap();
+            println!("Sent");
+            let mut buffer = [0; 512];
+            let no = stream.read(&mut buffer).unwrap();
+            let mut data = std::str::from_utf8(&buffer[0..no]).unwrap();
+            println!("Returned: {}",data);
         }
 
         _ => println!("No valid subcommand was used"),
