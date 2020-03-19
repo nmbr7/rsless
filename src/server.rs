@@ -1,5 +1,9 @@
-use serde::{Deserialize, Serialize};
+mod manage;
+mod runtime;
+mod templates;
+
 use serde_json::Value;
+
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::mpsc;
@@ -22,7 +26,6 @@ pub enum MsgTypeError {
 pub fn server_api_handler(
     mut stream: TcpStream,
     server_dup_tx: mpsc::Sender<String>,
-    data: String,
 ) -> Result<MsgType, MsgTypeError> {
     //TODO reduce  the buffer size  and use a loop
     let mut buffer = [0; 55512];
@@ -36,18 +39,19 @@ pub fn server_api_handler(
     //println!("{:?}", data);
     let recv_data: Value = serde_json::from_str(data).unwrap();
     // Handle different client commands
+    msg_parser(&mut stream, recv_data)
+}
+
+pub fn msg_parser(stream: &mut TcpStream, recv_data: Value) -> Result<MsgType, MsgTypeError> {
     match recv_data["msg_type"].as_str() {
         Some("MANAGE") => {
-            //      let rc: NodeResources = serde_json::from_str(&recv_data.content).unwrap();
             // TODO: Change unwrap()
             let mut result = action(&recv_data).unwrap();
             stream.write_all(result.as_bytes()).unwrap();
             stream.flush().unwrap();
-            //println!("REGISTER\n{:?}", rc);
             Ok(MsgType::MANAGE)
         }
         Some("INVOKE") => {
-            //    let rc: StatUpdate = serde_json::from_str(&recv_data.content).unwrap();
             let paramsval = recv_data["params"].as_array().unwrap();
             let mut params: Vec<String> = Vec::new();
             for i in 0..paramsval.len() {
@@ -55,12 +59,10 @@ pub fn server_api_handler(
             }
             let id = recv_data["id"].to_string();
             let mut result = invoke(id, params).unwrap();
-            //let put = b"Hello from server--";
             stream
                 .write_all(format!("HTTP/1.1 200 OK\r\n\r\n{}", result).as_bytes())
                 .unwrap();
             stream.flush().unwrap();
-            //println!("UPDATE_SYSSTAT\n{:?}", rc);
             Ok(MsgType::INVOKE)
         }
         _ => Err(MsgTypeError::UnknownMsg),

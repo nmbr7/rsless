@@ -1,36 +1,37 @@
 // FaaS Base Tcp Server
 
-// Doesn't handle anything related to the core functionality of the \
-// FaaS system the server.rs module provide the core functions
+// Doesn't handle anything related to the core functionality of the FaaS system
+// The server.rs module provide the core functions
+
+/*
+   CURRENT IMPLEMENTATION
+
+   <PHASE 1>
+      1) A Request-Response FaaS system
+      2) A Remote Procedure call model
+*/
 
 #[macro_use]
 extern crate clap;
-
-extern crate walkdir;
-use walkdir::WalkDir;
 extern crate redis;
+extern crate walkdir;
 
-mod manage;
-mod runtime;
-mod server;
-mod templates;
+//mod manage;
+//mod runtime;
+//mod server;
+//mod templates;
 
 use serde_json::{json, Value};
+use walkdir::WalkDir;
+
+use std::fs::File;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::sync::mpsc;
 use std::thread;
 
-use server::server_api_handler;
-/*
-
-   TODO
-
-   <PHASE 1>
-      1) A Request-Response FaaS system
-      2) A Remote Procedure call model
-*/
+use librsless::server_api_handler;
 
 pub fn server_api_main(server_tx: mpsc::Sender<String>) -> () {
     let listener = TcpListener::bind("0.0.0.0:9888").unwrap();
@@ -45,9 +46,36 @@ pub fn server_api_main(server_tx: mpsc::Sender<String>) -> () {
         let server_dup_tx = mpsc::Sender::clone(&server_tx);
 
         thread::spawn(move || {
-            server_api_handler(stream, server_dup_tx, data);
+            let response = server_api_handler(stream, server_dup_tx);
         });
     }
+}
+
+fn dirjson(dir: String) -> String {
+    let mut directory: Vec<String> = Vec::new();
+    let mut files: Vec<String> = Vec::new();
+    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        if entry.metadata().unwrap().is_dir() {
+            directory.push(entry.path().to_str().unwrap().to_string());
+        } else {
+            files.push(entry.path().to_str().unwrap().to_string());
+        }
+    }
+
+    let mut all: Vec<String> = Vec::new();
+    for i in &files {
+        let mut file = File::open(&i).unwrap();
+        let mut buf = Vec::new();
+        file.read_to_end(&mut buf).unwrap();
+        let test = format!(" {:?} : {:?} ", i, std::str::from_utf8(&buf).unwrap());
+        all.push(test);
+        //let format!("{}",test);
+    }
+    let dirs = format!("\"dirs\" : {:?}", directory);
+    let file_name = format!("\"file_name\" : {:?}", files);
+    let file_data = format!("\"files\" : {{ {} }}", all.join(",")).replace("\'", "\\u{27}");
+    let all = format!(" {} , {} , {} ", dirs, file_name, file_data);
+    all
 }
 
 fn main() -> std::io::Result<()> {
@@ -120,7 +148,7 @@ fn main() -> std::io::Result<()> {
             let msg_data = match client_matches.subcommand() {
                 ("create", Some(create_matches)) => {
                     let lang = create_matches.value_of("lang").unwrap().to_string();
-                    let prototype= create_matches.value_of("prototype").unwrap().to_string();
+                    let prototype = create_matches.value_of("prototype").unwrap().to_string();
                     let dir = create_matches.value_of("dir").unwrap().to_string();
                     let djson = dirjson(dir);
                     let data = format!("{{ \"msg_type\": \"MANAGE\" , \"action\": \"create\",\"lang\": {:?}, \"prototype\": {:?}, {} }}",lang, prototype, djson);
@@ -167,68 +195,10 @@ fn main() -> std::io::Result<()> {
             let mut buffer = [0; 512];
             let no = stream.read(&mut buffer).unwrap();
             let mut data = std::str::from_utf8(&buffer[0..no]).unwrap();
-            println!("Returned: {}",data);
+            println!("Returned: {}", data);
         }
 
         _ => println!("No valid subcommand was used"),
     };
     Ok(())
-}
-
-fn dirjson(dir: String) -> String {
-    let mut directory: Vec<String> = Vec::new();
-    let mut files: Vec<String> = Vec::new();
-    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-        if entry.metadata().unwrap().is_dir() {
-            directory.push(entry.path().to_str().unwrap().to_string());
-        } else {
-            files.push(entry.path().to_str().unwrap().to_string());
-        }
-    }
-
-    use std::fs::File;
-
-    //println!("{:?}",files[1]);
-    //let mut file = File::open(&files[2]).unwrap();
-    //let mut buf = Vec::new();
-    //file.read_to_end(&mut buf).unwrap();
-    //let js = json!({
-    //  format!("{}",files[2]) : format!("{}",std::str::from_utf8(&buf).unwrap()),
-    //"files": {
-    //  "data" : "class"
-
-    // }
-    // });
-    let mut all: Vec<String> = Vec::new();
-    for i in &files {
-        let mut file = File::open(&i).unwrap();
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf).unwrap();
-        let test = format!(" {:?} : {:?} ", i, std::str::from_utf8(&buf).unwrap());
-        all.push(test);
-        //let format!("{}",test);
-    }
-    //println!("{:?}",all);
-    /*let data = json!({
-        "msg_type": "MANAGE",
-        "action": "create",
-        "lang": lang,
-    }).to_string();
-    */
-    let Dirs = format!("\"dirs\" : {:?}", directory);
-    let file_name = format!("\"file_name\" : {:?}", files);
-    let file_data = format!("\"files\" : {{ {} }}", all.join(",")).replace("\'", "\\u{27}");
-
-    let all = format!(" {} , {} , {} ", Dirs, file_name, file_data);
-
-    //println!("{}",total);
-    //let a = format!("{}",js[&files[2]].as_str().unwrap());
-    //println!("{}",all);
-    //let rc: Value = serde_json::from_str(&all).unwrap();
-    //println!("{}",rc["files"]["src/main.rs"].as_str().unwrap().replace("\\u{27}","\'"));
-    //println!("{}",rc["src/main.rs"]);
-    //let d = format!("{}",rc[&files[2]].to_string());
-    // let mut nf = File::create("newfile.rs").unwrap();
-    // nf.write_all(a.as_bytes()).unwrap();
-    all
 }

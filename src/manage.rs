@@ -1,11 +1,13 @@
 use crate::templates::rust_temp;
+
 use redis::Commands;
 use serde_json::Value;
+use uuid::Uuid;
+
 use std::fs::OpenOptions;
 use std::fs::{self, DirBuilder};
 use std::io::prelude::*;
 use std::io::BufWriter;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum action_error {
@@ -21,9 +23,8 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     let dirs = &data["dirs"].as_array().unwrap();
     let files = &data["files"];
 
-    //println!("{}\n{:?}\n{:?}",lang,filenames,dirs);
-
     let path = String::from("temp");
+
     for i in 0..dirs.len() {
         DirBuilder::new()
             .recursive(true)
@@ -31,17 +32,14 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
             .unwrap();
     }
 
-    let mut ind: String = String::from("");
+    let mut mainfile: String = String::from("");
     for i in 0..filenames.len() {
         if filenames[i].as_str().unwrap().ends_with("/main.rs") {
-            ind = filenames[i].as_str().unwrap().to_string();
+            mainfile = filenames[i].as_str().unwrap().to_string();
         }
     }
-    //let mainfile = &files[ind].as_str().unwrap();
-    //println!("{}",mainfile);
-
-    let function_id = Uuid::new_v4().to_string() ;
-    let func_binary_path = format!("{}","temp/target/target/release/temp");
+    let function_id = Uuid::new_v4().to_string();
+    let func_binary_path = format!("{}", "temp/target/target/release/temp");
 
     let mut con_pub = redis::Client::open("redis://172.28.5.3/2").unwrap();
     let _: () = con_pub.set(&function_id, &func_binary_path).unwrap();
@@ -64,13 +62,12 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
         .unwrap();
         buf.flush().unwrap();
     }
+    println!("Inside finished writing");
     match lang {
         "Rust" => {
-            //println!("Reached {}",lang);
-
+            println!("Inside Rust");
             let path = String::from("temp");
-            //let proto = String::from("sd");
-            rust_temp(ind, path, prototype.to_string());
+            rust_temp(mainfile, path, prototype.to_string());
             Ok(function_id)
         }
         //Some("Python") => ,
@@ -89,8 +86,8 @@ fn faas_delete(id: String) -> Result<String, action_error> {
     let mut con_dev = dev_db.get_connection().unwrap();
     let mut con_pub = pub_db.get_connection().unwrap();
 
-    let _: () = con_dev.del(&id.replace("\"","")).unwrap();
-    let _: () = con_pub.del(&id.replace("\"","")).unwrap();
+    let _: () = con_dev.del(&id.replace("\"", "")).unwrap();
+    let _: () = con_pub.del(&id.replace("\"", "")).unwrap();
     Ok(String::from("OK"))
 }
 //After publishing, the function will be invokable
@@ -101,8 +98,8 @@ fn faas_publish(id: String) -> Result<String, action_error> {
     let mut con_dev = dev_db.get_connection().unwrap();
     let mut con_pub = pub_db.get_connection().unwrap();
 
-    let val: String = con_dev.get(&id.replace("\"","")).unwrap();
-    let _: () = con_pub.set(&id.replace("\"",""), &val).unwrap();
+    let val: String = con_dev.get(&id.replace("\"", "")).unwrap();
+    let _: () = con_pub.set(&id.replace("\"", ""), &val).unwrap();
     Ok(String::from("OK"))
 }
 // TODO Currently only RPC is implemented (ie, Not Statefull)
