@@ -6,7 +6,7 @@ An RPC tool/library written in Rust
 cargo run --release -- server
 `
 
-## creating a function
+## Creating a function
 `
 cargo run --release --  client -c 127.0.0.1:9888 create -l 'Rust' -d fibexample -p "fib(arg1:u128) -> u128"
 `
