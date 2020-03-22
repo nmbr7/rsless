@@ -15,6 +15,7 @@ pub enum action_error {
     DeleteError,
     CreateError,
     Unknown,
+    MainFileError,
 }
 fn faas_create(data: &Value) -> Result<String, action_error> {
     let lang = data["lang"].as_str().unwrap();
@@ -23,33 +24,43 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     let dirs = &data["dirs"].as_array().unwrap();
     let files = &data["files"];
 
-    let path = String::from("temp");
+    let rootpath = String::from(".FaasDirectory");
 
+    //TODO for different users create sub folders
+    //path = format!("{}/{}",path,uuid);
+    
     for i in 0..dirs.len() {
         DirBuilder::new()
             .recursive(true)
-            .create(format!("{}/{}", path, dirs[i].as_str().unwrap()))
+            .create(format!("{}/{}", rootpath, dirs[i].as_str().unwrap()))
             .unwrap();
     }
 
     let mut mainfile: String = String::from("");
     for i in 0..filenames.len() {
-        if filenames[i].as_str().unwrap().ends_with("/main.rs") {
+        if filenames[i].as_str().unwrap().ends_with("src/main.rs") {
             mainfile = filenames[i].as_str().unwrap().to_string();
         }
     }
+    if mainfile == String::from("") {
+        return Err(action_error::MainFileError);
+    } 
+
+    let path = format!("{}/{}",rootpath,mainfile.trim_end_matches("/src/main.rs"));
     let function_id = Uuid::new_v4().to_string();
-    let func_binary_path = format!("{}", "temp/target/target/release/temp");
+    let binary_name = format!("faas_{}",function_id);
+    let func_binary_path = format!("{}/target/release/{}", path, binary_name);
 
     let mut con_pub = redis::Client::open("redis://172.28.5.3/2").unwrap();
     let _: () = con_pub.set(&function_id, &func_binary_path).unwrap();
 
     for i in 0..filenames.len() {
         let file = filenames[i].as_str().unwrap().to_string();
+        println!("Creating file {}", file);
         let fh = OpenOptions::new()
             .write(true)
             .create(true)
-            .open(format!("{}/{}", path, file))
+            .open(format!("{}/{}", rootpath, file))
             .unwrap();
         let mut buf = BufWriter::new(fh);
         buf.write_all(
@@ -65,9 +76,8 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     println!("Inside finished writing");
     match lang {
         "Rust" => {
-            println!("Inside Rust");
-            let path = String::from("temp");
-            rust_temp(mainfile, path, prototype.to_string());
+            println!("Inside Rust Action");
+            rust_temp(binary_name, path, prototype.to_string());
             Ok(function_id)
         }
         //Some("Python") => ,
