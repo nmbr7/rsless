@@ -1,6 +1,7 @@
 # rsless
 An RPC tool/library written in Rust
 
+<<<<<<< HEAD
 # Start Server
 `
 cargo run --release -- server
@@ -24,3 +25,6 @@ curl --header "Content-Type: application/json" --request POST\  --data '{"msg_ty
 `
 
 
+=======
+-_- Not stable yet
+>>>>>>> 007577f18ec32898635226ec099f7b717f91a4c7
