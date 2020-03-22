@@ -6,13 +6,17 @@
 <h4 align="center">An RPC tool/library written in Rust</h4>
 
 ---
+# Example
 
-## Start Server
+### Starting Server
 `
 cargo run --release -- server
 `
 
 ### Creating a function
+
+Using client subcommand
+
 `
 cargo run --release --  client -c 127.0.0.1:9888 create -l 'Rust' -d fibexample -p "fib(arg1:u128) -> u128"
 `
@@ -31,5 +35,9 @@ If published, returns OK
 curl --header "Content-Type: application/json" --request POST\  --data '{"msg_type":"INVOKE", "params" : ["100"] , "id": "1dbe0457-5747-4ef1-b468-fd5ece355c8f"  }'  127.0.0.1:9888
 `
 
+***
 
-Not Yet Stable
+:heavy_exclamation_mark: Not Yet Stable
+
+
+***
