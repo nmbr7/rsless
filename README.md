@@ -10,12 +10,14 @@ cargo run --release -- server
 `
 cargo run --release --  client -c 127.0.0.1:9888 create -l 'Rust' -d fibexample -p "fib(arg1:u128) -> u128"
 `
+
 Returns a uuid
 
 ## Publish uploaded function
 `
 cargo run --release --  client -c 127.0.0.1:9888 publish -i 5c72527c-373e-43a2-9d29-4bb8f5fe69e1
 `
+
 If published returns OK
 
 ## Testing using curl
