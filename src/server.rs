@@ -44,7 +44,7 @@ pub fn server_api_handler(
 pub fn msg_parser(stream: &mut TcpStream, recv_data: Value) -> Result<MsgType, MsgTypeError> {
     match recv_data["msg_type"].as_str() {
         Some("MANAGE") => {
-            println!("Managing {} message",recv_data["action"].as_str().unwrap());
+            println!("Managing {} message", recv_data["action"].as_str().unwrap());
             // TODO: Change unwrap()
             let mut result = action(&recv_data).unwrap();
             stream.write_all(result.as_bytes()).unwrap();

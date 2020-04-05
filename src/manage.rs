@@ -28,7 +28,7 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
 
     //TODO for different users create sub folders
     //path = format!("{}/{}",path,uuid);
-    
+
     for i in 0..dirs.len() {
         DirBuilder::new()
             .recursive(true)
@@ -44,11 +44,11 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     }
     if mainfile == String::from("") {
         return Err(action_error::MainFileError);
-    } 
+    }
 
-    let path = format!("{}/{}",rootpath,mainfile.trim_end_matches("/src/main.rs"));
+    let path = format!("{}/{}", rootpath, mainfile.trim_end_matches("/src/main.rs"));
     let function_id = Uuid::new_v4().to_string();
-    let binary_name = format!("faas_{}",function_id);
+    let binary_name = format!("faas_{}", function_id);
     let func_binary_path = format!("{}/target/release/{}", path, binary_name);
 
     let mut con_pub = redis::Client::open("redis://172.28.5.3/2").unwrap();
