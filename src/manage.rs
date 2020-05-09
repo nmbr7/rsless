@@ -3,7 +3,8 @@ use crate::templates::rust_temp;
 use redis::Commands;
 use serde_json::Value;
 use uuid::Uuid;
-
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::fs::OpenOptions;
 use std::fs::{self, DirBuilder};
 use std::io::prelude::*;
@@ -24,10 +25,15 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     let dirs = &data["dirs"].as_array().unwrap();
     let files = &data["files"];
 
-    let rootpath = String::from(".FaasDirectory");
 
     //TODO for different users create sub folders
     //path = format!("{}/{}",path,uuid);
+    let function_id = Uuid::new_v4().to_string();
+    let mut hasher = DefaultHasher::new();
+    format!("{}",function_id).hash(&mut hasher);
+    let faashash = format!("{}", hasher.finish());
+    
+    let rootpath = format!(".FaasDirectory/{}",faashash);
 
     for i in 0..dirs.len() {
         DirBuilder::new()
@@ -47,7 +53,6 @@ fn faas_create(data: &Value) -> Result<String, action_error> {
     }
 
     let path = format!("{}/{}", rootpath, mainfile.trim_end_matches("/src/main.rs"));
-    let function_id = Uuid::new_v4().to_string();
     let binary_name = format!("faas_{}", function_id);
     let func_binary_path = format!("{}/target/release/{}", path, binary_name);
 

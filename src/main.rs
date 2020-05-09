@@ -83,6 +83,7 @@ fn main() -> std::io::Result<()> {
     (version: "0.1.0")
     (author: "nmbr_7")
     (about: "A Server less solution")
+    (@setting SubcommandRequiredElseHelp)
     (@subcommand server =>
      (about: "Subcommand to use server")
      (version: "0.1.0")
@@ -92,6 +93,7 @@ fn main() -> std::io::Result<()> {
      (about: "Subcommand to use client")
      (version: "0.1.0")
      (author: "nmbr_7")
+     (@setting SubcommandRequiredElseHelp)
      (@arg connect: -c --connect +takes_value "destination addr and port")
      (@subcommand create =>
             (about: "list all the files")
